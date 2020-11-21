@@ -121,10 +121,10 @@ class Matrix():
     # Multiplication of the matrix by a Vector (Node3D)
     #  node : a Node3D (4 dim vector) object
     def multiply_by_node(self, node):
-        from node import Node3D
+        from node import NamedNode3D
 
         # Result vector
-        n = Node3D()
+        n = NamedNode3D()
         
         n.x = self.xx * node.x + \
                 self.xy * node.y + \
@@ -145,6 +145,8 @@ class Matrix():
                 self.wy * node.y + \
                 self.wz * node.z + \
                 self.ww * node.w
+
+        n.name = node.name
 
         return n
 

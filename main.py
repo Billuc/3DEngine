@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import IntVar
 from tkinter import simpledialog
 from viewer import Viewer
-from node import Node3D
+from node import NamedNode3D
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -10,15 +10,17 @@ class Application(tk.Frame):
         self.master = master
         self.pack(fill="both", expand=True)
 
-        self.node_dict = {}
-
-        self.axles_nodes = {}
-        self.axles_nodes["center"] = Node3D(0,0,0)
-        self.axles_nodes["x_axis"] = Node3D(1,0,0)
-        self.axles_nodes["y_axis"] = Node3D(0,1,0)
-        self.axles_nodes["z_axis"] = Node3D(0,0,1)
-
         self.viewer = Viewer(600,400,p_radius=2)
+
+        center = NamedNode3D(0,0,0, pname="center")
+        x_axis = NamedNode3D(1,0,0, pname="x_axis")
+        y_axis = NamedNode3D(0,1,0, pname="y_axis")
+        z_axis = NamedNode3D(0,0,1, pname="z_axis")
+        self.viewer.add_node(center)
+        self.viewer.add_node(x_axis)
+        self.viewer.add_node(y_axis)
+        self.viewer.add_node(z_axis)
+
         self.node_radius = 4
         self.angle_increment = 1
         self.distance_increment = 0.1
@@ -225,9 +227,8 @@ class Application(tk.Frame):
         z = simpledialog.askfloat("Z", "Rentrez la valeur de Z")
         name = simpledialog.askstring("Nom du point", "Rentrez un nom pour le point")
 
-        new_node = Node3D(x, y, z)
+        new_node = NamedNode3D(x, y, z, pname=name)
         self.viewer.add_node(new_node)
-        self.node_dict[name] = new_node
 
         self.draw()
 
@@ -243,61 +244,44 @@ class Application(tk.Frame):
                     fill="#00ff00"
                 )
 
-        self.draw_axles()
-
         self.viewer.calc_nodes_2d()
+        self.draw_axes()
 
         for n in self.viewer.nodes_2d:
             displayed_radius = self.node_radius * self.viewer.radius / (n.z / n.w)
+
+            fill_color = "red"
+            if n.name in ("center", "x_axis", "y_axis", "z_axis"):
+                fill_color = "blue"
 
             self.canvas.create_oval(
                 n.x / n.w - displayed_radius,
                 n.y / n.w - displayed_radius,
                 n.x / n.w + displayed_radius,
                 n.y / n.w + displayed_radius,
-                fill="red"
+                fill=fill_color
             )
 
-    def draw_axles(self):
-        center = self.viewer.calc_one_node(self.axles_nodes["center"])
+    def draw_axes(self):
+        calc_center = self.viewer.find("center")
+        calc_x = self.viewer.find("x_axis")
+        calc_y = self.viewer.find("y_axis")
+        calc_z = self.viewer.find("z_axis")  
 
-        axis = []
-        axis.append(self.viewer.calc_one_node(self.axles_nodes["x_axis"]))
-        axis.append(self.viewer.calc_one_node(self.axles_nodes["y_axis"]))
-        axis.append(self.viewer.calc_one_node(self.axles_nodes["z_axis"]))
-        
-        for n in axis:
-            if n is not None and center is not None:
-                self.canvas.create_line(
-                    center.x / center.w, 
-                    center.y / center.w,
-                    n.x / n.w,
-                    n.y / n.w,
+        self.draw_axis(calc_center, calc_x)    
+        self.draw_axis(calc_center, calc_y)    
+        self.draw_axis(calc_center, calc_z)    
+
+    
+    def draw_axis(self, point_a, point_b):
+        if point_a is not None and point_b is not None:
+            self.canvas.create_line(
+                    point_a.x / point_a.w, 
+                    point_a.y / point_a.w,
+                    point_b.x / point_b.w,
+                    point_b.y / point_b.w,
                     fill="black"
                 )
-
-        if center is not None:
-            displayed_radius = self.node_radius * self.viewer.radius / (center.z / center.w)
-
-            self.canvas.create_oval(
-                center.x / center.w - displayed_radius,
-                center.y / center.w - displayed_radius,
-                center.x / center.w + displayed_radius,
-                center.y / center.w + displayed_radius,
-                fill="blue"
-            )  
-
-        for n in axis:
-            if n is not None:
-                displayed_radius = self.node_radius * self.viewer.radius / (n.z / n.w)
-
-                self.canvas.create_oval(
-                    n.x / n.w - displayed_radius,
-                    n.y / n.w - displayed_radius,
-                    n.x / n.w + displayed_radius,
-                    n.y / n.w + displayed_radius,
-                    fill="blue"
-                )    
 
 
 

@@ -1,4 +1,4 @@
-from node import Node3D
+from node import NamedNode3D
 from matrix import Matrix
 from math import cos, sin, pi, tan, atan
 
@@ -32,7 +32,10 @@ class Viewer():
 
     # Method to add a new node
     def add_node(self, node):
-        self.nodes.append(node)
+        if self.find(node.name) is None:
+            self.nodes.append(node)
+        else: 
+            raise BaseException("A node with this name already exists")
         
 
     # Calculating the intersection of the screen plan and the line passing through the camera and the transformed node
@@ -56,10 +59,10 @@ class Viewer():
 
             distance = ( (node.x / node.w) - self.radius )**2 + (node.y / node.w)**2 + (node.z / node.w)**2
             distance = distance**(1/2.)
-            
+
             # Creating the projected node (with absolute coordinates)
             #  We add the distance to camera in the z coordinate
-            node_2d = Node3D(self.width * y, self.height * z, distance, 1)
+            node_2d = NamedNode3D(self.width * y, self.height * z, distance, 1, node.name)
             return node_2d
         else:
             return None
@@ -175,6 +178,12 @@ class Viewer():
                                         0,0,0,1
                                     )
 
+    # Returns the calculated node corresponding to the given name
+    def find(self, pname):
+        for node in self.nodes_2d:
+            if node.name == pname:
+                return node
+        return None
 
 # Function to get the transform matrix of a rotation around the x-axis
 def get_rot_x_matrix(angle):
