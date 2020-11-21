@@ -57,11 +57,22 @@ class Application(tk.Frame):
         self.canvas.pack(side="top", fill="both", expand=True)
 
         #Frame displaying the dots and buttons to add more
-        self.add_node_frame = tk.Frame(self, bg="#ffffc5")
-        self.add_node_frame.pack(side="right", fill="y")
+        self.right_frame = tk.Frame(self, bg="#ffffc5")
+        self.right_frame.pack(side="right", fill="y")
 
-        self.create_button = tk.Button(self.add_node_frame, bg="#00ff00", padx=5, pady=2, text="Create a node", command=self.create_node)
+        self.create_button = tk.Button(self.right_frame, bg="#00ff00", padx=5, pady=2, text="Create a node", command=self.create_node)
         self.create_button.pack(side="top", pady=(10,0))
+
+        self.nodes_frame = tk.Frame(self.right_frame)
+        self.nodes_frame.pack(side="top", fill="both", pady=10)
+
+        self.scroll_bar = tk.Scrollbar(self.nodes_frame)
+        self.scroll_bar.pack(side="right", fill="y")
+
+        self.list_of_nodes = tk.Listbox(self.nodes_frame, yscrollcommand = self.scroll_bar.set)
+        self.list_of_nodes.pack(side="left", fill="both")
+
+        self.scroll_bar.config(command=self.list_of_nodes.yview)
 
         #Mode selection frame
         self.bottom_frame = tk.Frame(self.main_frame, bg="#ffffc5")
@@ -227,28 +238,32 @@ class Application(tk.Frame):
         z = simpledialog.askfloat("Z", "Rentrez la valeur de Z")
         name = simpledialog.askstring("Nom du point", "Rentrez un nom pour le point")
 
-        new_node = NamedNode3D(x, y, z, pname=name)
-        self.viewer.add_node(new_node)
+        if x is None or y is None or z is None or name is None:
+            raise BaseException("Missing field ! All fields have to be filled.")
+        else:
+            new_node = NamedNode3D(x, y, z, pname=name)
+            self.viewer.add_node(new_node)
+            self.list_of_nodes.insert("end", new_node)
 
-        self.draw()
+            self.draw()
 
     def draw(self):
         self.canvas.delete("all")
 
-        # Central point
+        """# Central point
         self.canvas.create_oval(
                     int(self.canvas.cget("width")) / 2. - self.node_radius,
                     int(self.canvas.cget("height")) / 2. - self.node_radius,
                     int(self.canvas.cget("width")) / 2. + self.node_radius,
                     int(self.canvas.cget("height")) / 2. + self.node_radius,
                     fill="#00ff00"
-                )
+                )"""
 
         self.viewer.calc_nodes_2d()
         self.draw_axes()
 
         for n in self.viewer.nodes_2d:
-            displayed_radius = self.node_radius * self.viewer.radius / (n.z / n.w)
+            displayed_radius = self.node_radius * n.w / n.z 
 
             fill_color = "red"
             if n.name in ("center", "x_axis", "y_axis", "z_axis"):
@@ -286,5 +301,6 @@ class Application(tk.Frame):
 
 
 root = tk.Tk()
+root.title("3D Engine")
 app = Application(master=root)
 app.mainloop()

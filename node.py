@@ -30,7 +30,7 @@ class NamedNode3D(Node3D):
         self.name = pname
 
     def __repr__(self):
-        node_as_string = "%s : \n(%s\n %s\n %s\n %s)" % (self.name, self.x, self.y, self.z, self.w)
+        node_as_string = "%s : (%s, %s, %s, %s)" % (self.name, self.x, self.y, self.z, self.w)
         return node_as_string
 
 
@@ -41,5 +41,5 @@ class NamedNode2D(Node2D):
         self.name = pname
 
     def __repr__(self):
-        node_as_string = "%s : \n(%s\n %s\n %s)" % (self.name, self.x, self.y, self.w)
+        node_as_string = "%s : (%s, %s, %s)" % (self.name, self.x, self.y, self.w)
         return node_as_string
