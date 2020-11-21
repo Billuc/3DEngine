@@ -1,4 +1,4 @@
-from node import *
+from node import Node3D
 from matrix import Matrix
 from math import cos, sin, pi, tan, atan
 
@@ -33,53 +33,70 @@ class Viewer():
     # Method to add a new node
     def add_node(self, node):
         self.nodes.append(node)
+        
+
+    # Calculating the intersection of the screen plan and the line passing through the camera and the transformed node
+    #  Plan's equation : x = 0 (the constant doesn't really matter as long as it is lower than self.radius; 0 is just convenient)
+    #  Line's equation : (x,y,z) = (camera pos) + t * ((transformed node) - (camera pos))
+    #   Camera position = (self.radius, 0, 0)
+    def transform_to_2d(self, node):
+        # To avoid dividing by 0
+        #  Basically, if the transformed node is at the same x as the camera, we won't add the node
+        if (node.x / node.w) == self.radius:
+            t = 0
+        else:
+            # Solving
+            t = - self.radius / ( (node.x / node.w) - self.radius )
+
+        # If we are in front of the camera, the node is added
+        if t > 0:
+            # Calculating the relative coordinates on the screen
+            y = ( t * node.y / node.w ) / ( 2 * self.radius * tan(self.h_fov / 2.) ) + 1 / 2. 
+            z = ( t * node.z / node.w ) / ( 2 * self.radius * tan(self.v_fov / 2.) ) + 1 / 2.
+
+            distance = ( (node.x / node.w) - self.radius )**2 + (node.y / node.w)**2 + (node.z / node.w)**2
+            distance = distance**(1/2.)
+            
+            # Creating the projected node (with absolute coordinates)
+            #  We add the distance to camera in the z coordinate
+            node_2d = Node3D(self.width * y, self.height * z, distance, 1)
+            return node_2d
+        else:
+            return None
+
+    
+    # From a 3D node calculate the transformed point then the 2D node
+    def calc_one_node(self, node):
+            # Calculating the transformed node by multiplying the transform matrix by the node
+            tranformed = self.transformation_matrix.multiply_by_node(node)
+            
+            # Calculating the 2d coordinates on the screen
+            return self.transform_to_2d(tranformed)
+
 
     # Method that transforms and projects the nodes
     def calc_nodes_2d(self):
-        self.transformed_nodes = []
         self.nodes_2d = []
 
         # Looping through all the nodes
         for n in self.nodes:
-            # Calculating the transformed node by multiplying the transform matrix by the node
-            tranformed = self.transformation_matrix.multiply_by_node(n)
-            # Unnecessary
-            self.transformed_nodes.append(tranformed)
+            node_2d = self.calc_one_node(n)
 
-            # Calculating the intersection of the screen plan and the line passing through the camera and the transformed node
-            #  Plan's equation : x = 0 (the constant doesn't really matter as long as it is lower than self.radius; 0 is just convenient)
-            #  Line's equation : (x,y,z) = (camera pos) + t * ((transformed node) - (camera pos))
-            #   Camera position = (self.radius, 0, 0)
-
-            # To avoid dividing by 0
-            #  Basically, if the transformed node is at the same x as the camera, we won't add the node
-            if (tranformed.x / tranformed.w) == self.radius:
-                t = 0
-            else:
-                # Solving
-                t = - self.radius / ( (tranformed.x / tranformed.w) - self.radius )
-
-            # If we are in front of the camera, the node is added
-            if t > 0:
-                # Calculating the relative coordinates on the screen
-                y = ( t * tranformed.y / tranformed.w ) / ( 2 * self.radius * tan(self.h_fov / 2.) ) + 1 / 2. 
-                z = ( t * tranformed.z / tranformed.w ) / ( 2 * self.radius * tan(self.v_fov / 2.) ) + 1 / 2.
-
-                distance = ( (tranformed.x / tranformed.w) - self.radius )**2 + (tranformed.y / tranformed.w)**2 + (tranformed.z / tranformed.w)**2
-                distance = distance**(1/2.)
-                
-                # Creating the projected node (with absolute coordinates)
-                #  We add the distance to camera in the z coordinate
-                node_2d = Node3D(self.width * y, self.height * z, distance, 1)
+            if node_2d is not None:
+                # Looking for the index to insert the node to (ordered by distance decreasing)
+                index = 0
+                while index < len(self.nodes_2d) and self.nodes_2d[index].z > node_2d.z:
+                    index += 1
 
                 # Adding the node
-                self.nodes_2d.append(node_2d)
+                self.nodes_2d.insert(index, node_2d)
+
 
     # Rotating the view horizontally (around the z-axis)
     # Updating the transform matrix
-    def rotate_horizontally(self, angle, isRadians = True):
+    def rotate_horizontally(self, angle, is_radians = True):
         # If the angle is in degrees, we convert it to radians
-        if not isRadians:
+        if not is_radians:
             angle = angle * pi / 180
 
         # Updating the transform matrix (rotating it by multiplicating by the rotation matrix)
@@ -87,9 +104,9 @@ class Viewer():
         
     # Rotating the view vertically (around the y-axis)
     # Updating the transform matrix
-    def rotate_vertically(self, angle, isRadians = False):
+    def rotate_vertically(self, angle, is_radians = False):
         # If the angle is in degrees, we convert it to radians
-        if not isRadians:
+        if not is_radians:
             angle = angle * pi / 180
 
         # Updating the transform matrix (rotating it by multiplicating by the rotation matrix)
@@ -97,9 +114,9 @@ class Viewer():
 
     # Rotating the camera horizontally (around the z-axis)
     # Updating the transform matrix
-    def rotate_camera_horizontally(self, angle, isRadians = True):
+    def rotate_camera_horizontally(self, angle, is_radians = True):
         # If the angle is in degrees, we convert it to radians
-        if not isRadians:
+        if not is_radians:
             angle = angle * pi / 180
 
         # Updating the transform matrix
@@ -109,9 +126,9 @@ class Viewer():
         
     # Rotating the camera vertically (around the y-axis)
     # Updating the transform matrix
-    def rotate_camera_vertically(self, angle, isRadians = False):
+    def rotate_camera_vertically(self, angle, is_radians = False):
         # If the angle is in degrees, we convert it to radians
-        if not isRadians:
+        if not is_radians:
             angle = angle * pi / 180
 
         # Updating the transform matrix

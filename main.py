@@ -1,7 +1,8 @@
 import tkinter as tk
 from tkinter import IntVar
+from tkinter import simpledialog
 from viewer import Viewer
-from node import *
+from node import Node3D
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -9,12 +10,13 @@ class Application(tk.Frame):
         self.master = master
         self.pack(fill="both", expand=True)
 
-        self.axles_viewer = Viewer(600,400,p_radius=2)
-        self.axles_viewer.add_node(Node3D(0,0,0))
+        self.node_dict = {}
 
-        self.axles_viewer.add_node(Node3D(1,0,0))
-        self.axles_viewer.add_node(Node3D(0,1,0))
-        self.axles_viewer.add_node(Node3D(0,0,1))
+        self.axles_nodes = {}
+        self.axles_nodes["center"] = Node3D(0,0,0)
+        self.axles_nodes["x_axis"] = Node3D(1,0,0)
+        self.axles_nodes["y_axis"] = Node3D(0,1,0)
+        self.axles_nodes["z_axis"] = Node3D(0,0,1)
 
         self.viewer = Viewer(600,400,p_radius=2)
         self.node_radius = 4
@@ -45,128 +47,101 @@ class Application(tk.Frame):
         self.master.bind('<Shift_L>', self.change_player_mode)
 
     def create_widgets(self):
-        self.canvas = tk.Canvas(self, bg="#d0d0d0", height=400, width=600)
-        self.canvas.pack(side="left", fill="both", expand=True)
+        self.main_frame = tk.Frame(self)
+        self.main_frame.pack(side="left", fill="both")
 
+        #Canvas where we draw the dots
+        self.canvas = tk.Canvas(self.main_frame, bg="#d0d0d0", height=400, width=600)
+        self.canvas.pack(side="top", fill="both", expand=True)
 
+        #Frame displaying the dots and buttons to add more
         self.add_node_frame = tk.Frame(self, bg="#ffffc5")
         self.add_node_frame.pack(side="right", fill="y")
 
-        self.add_frame_label = tk.Label(self.add_node_frame, padx=7, pady=5, text="New Node", bg="#08aaff")
-        self.add_frame_label.pack(side="top", fill="x")
-        
-        self.x_label = tk.Label(self.add_node_frame, padx=3, text="X", bg="#ffffc5")
-        self.x_label.pack(side="top", pady=(5,0))
-
-        self.x_entry = tk.Entry(self.add_node_frame)
-        self.x_entry.pack(side="top", padx=3)
-
-        self.y_label = tk.Label(self.add_node_frame, padx=3, text="Y", bg="#ffffc5")
-        self.y_label.pack(side="top", pady=(10,0))
-
-        self.y_entry = tk.Entry(self.add_node_frame)
-        self.y_entry.pack(side="top", padx=3)
-
-        self.z_label = tk.Label(self.add_node_frame, padx=3, text="Z", bg="#ffffc5")
-        self.z_label.pack(side="top", pady=(10,0))
-
-        self.z_entry = tk.Entry(self.add_node_frame)
-        self.z_entry.pack(side="top", padx=3)
-
-        self.create_button = tk.Button(self.add_node_frame, bg="#00ff00", padx=5, pady=2, text="Create", command=self.create_node)
+        self.create_button = tk.Button(self.add_node_frame, bg="#00ff00", padx=5, pady=2, text="Create a node", command=self.create_node)
         self.create_button.pack(side="top", pady=(10,0))
-        
-        self.reset_button = tk.Button(self.add_node_frame, bg="red", padx=5, pady=2, text="Reset", command=self.reset_viewers)
-        self.reset_button.pack(side="bottom", pady=10)
 
-        self.mode_label = tk.Label(self.add_node_frame, padx=7, pady=5, text="Movement Mode selection", bg="#08aaff")
-        self.mode_label.pack(side="top", fill="x", pady=10)
+        #Mode selection frame
+        self.bottom_frame = tk.Frame(self.main_frame, bg="#ffffc5")
+        self.bottom_frame.pack(side="bottom", fill="x")
 
-        self.radio_rotating = tk.Radiobutton(self.add_node_frame, text="Rotating", variable=self.movement_mode, value=1, bg="#ffffc5")
-        self.radio_rotating.pack(side="top")
+        self.mode_label = tk.Label(self.bottom_frame, padx=7, pady=5, text="Movement Mode selection", bg="#08aaff")
+        self.mode_label.pack(side="left", fill="y", padx=10)
+
+        self.radio_rotating = tk.Radiobutton(self.bottom_frame, text="Rotating", variable=self.movement_mode, value=1, bg="#ffffc5")
+        self.radio_rotating.pack(side="left")
         self.radio_rotating.select()
         
-        self.radio_moving = tk.Radiobutton(self.add_node_frame, text="Moving", variable=self.movement_mode, value=2, bg="#ffffc5")
-        self.radio_moving.pack(side="top")
+        self.radio_moving = tk.Radiobutton(self.bottom_frame, text="Moving", variable=self.movement_mode, value=2, bg="#ffffc5")
+        self.radio_moving.pack(side="left")
 
-        self.mode_label = tk.Label(self.add_node_frame, padx=7, pady=5, text="Player Mode selection", bg="#08aaff")
-        self.mode_label.pack(side="top", fill="x", pady=10)
+        self.mode_label = tk.Label(self.bottom_frame, padx=7, pady=5, text="Player Mode selection", bg="#08aaff")
+        self.mode_label.pack(side="left", fill="y", padx=10)
 
-        self.radio_origin = tk.Radiobutton(self.add_node_frame, text="Origin centered", variable=self.player_mode, value=1, bg="#ffffc5")
-        self.radio_origin.pack(side="top")
+        self.radio_origin = tk.Radiobutton(self.bottom_frame, text="Origin centered", variable=self.player_mode, value=1, bg="#ffffc5")
+        self.radio_origin.pack(side="left")
         self.radio_origin.select()
         
-        self.radio_player = tk.Radiobutton(self.add_node_frame, text="Player centered", variable=self.player_mode, value=2, bg="#ffffc5")
-        self.radio_player.pack(side="top")
+        self.radio_player = tk.Radiobutton(self.bottom_frame, text="Player centered", variable=self.player_mode, value=2, bg="#ffffc5")
+        self.radio_player.pack(side="left")
+
+        self.reset_button = tk.Button(self.bottom_frame, bg="red", padx=5, pady=2, text="Reset", command=self.reset_viewers)
+        self.reset_button.pack(side="right", padx=10)
 
 
     def rotate_left(self):
-        self.axles_viewer.rotate_horizontally(-self.angle_increment, False)
         self.viewer.rotate_horizontally(-self.angle_increment, False)
         self.draw()
 
     def rotate_right(self):
-        self.axles_viewer.rotate_horizontally(self.angle_increment, False)
         self.viewer.rotate_horizontally(self.angle_increment, False)
         self.draw()
 
     def rotate_up(self):
-        self.axles_viewer.rotate_vertically(self.angle_increment, False)
         self.viewer.rotate_vertically(self.angle_increment, False)
         self.draw()
         
     def rotate_down(self):
-        self.axles_viewer.rotate_vertically(-self.angle_increment, False)
         self.viewer.rotate_vertically(-self.angle_increment, False)
         self.draw()
 
     def move_left(self):
-        self.axles_viewer.translate_horizontally(-self.distance_increment)
         self.viewer.translate_horizontally(-self.distance_increment)
         self.draw()
 
     def move_right(self):
-        self.axles_viewer.translate_horizontally(self.distance_increment)
         self.viewer.translate_horizontally(self.distance_increment)
         self.draw()
 
     def move_up(self):
-        self.axles_viewer.translate_vertically(-self.distance_increment)
         self.viewer.translate_vertically(-self.distance_increment)
         self.draw()
         
     def move_down(self):
-        self.axles_viewer.translate_vertically(self.distance_increment)
         self.viewer.translate_vertically(self.distance_increment)
         self.draw()
 
     def rotate_camera_left(self):
-        self.axles_viewer.rotate_camera_horizontally(-self.angle_increment, False)
         self.viewer.rotate_camera_horizontally(-self.angle_increment, False)
         self.draw()
 
     def rotate_camera_right(self):
-        self.axles_viewer.rotate_camera_horizontally(self.angle_increment, False)
         self.viewer.rotate_camera_horizontally(self.angle_increment, False)
         self.draw()
 
     def rotate_camera_up(self):
-        self.axles_viewer.rotate_camera_vertically(self.angle_increment, False)
         self.viewer.rotate_camera_vertically(self.angle_increment, False)
         self.draw()
         
     def rotate_camera_down(self):
-        self.axles_viewer.rotate_camera_vertically(-self.angle_increment, False)
         self.viewer.rotate_camera_vertically(-self.angle_increment, False)
         self.draw()
 
     def zoom_in(self):
-        self.axles_viewer.decrease_radius(self.radius_increment)
         self.viewer.decrease_radius(self.radius_increment)
         self.draw()
 
     def zoom_out(self):
-        self.axles_viewer.increase_radius(self.radius_increment)
         self.viewer.increase_radius(self.radius_increment)
         self.draw()
 
@@ -179,7 +154,6 @@ class Application(tk.Frame):
     def resize(self, event):
         w,h = event.width - 4, event.height - 4
 
-        self.axles_viewer.update_dimensions(w, h)
         self.viewer.update_dimensions(w, h)
 
         self.canvas.config(width=w, height=h)
@@ -241,24 +215,21 @@ class Application(tk.Frame):
             self.radio_origin.select()
 
     def reset_viewers(self):
-        self.axles_viewer.reset_transform_matrix()
         self.viewer.reset_transform_matrix()
 
         self.draw()
 
     def create_node(self):
-        x = float(self.x_entry.get())
-        y = float(self.y_entry.get())
-        z = float(self.z_entry.get())
+        x = simpledialog.askfloat("X", "Rentrez la valeur de X")
+        y = simpledialog.askfloat("Y", "Rentrez la valeur de Y")
+        z = simpledialog.askfloat("Z", "Rentrez la valeur de Z")
+        name = simpledialog.askstring("Nom du point", "Rentrez un nom pour le point")
 
         new_node = Node3D(x, y, z)
         self.viewer.add_node(new_node)
+        self.node_dict[name] = new_node
 
         self.draw()
-
-        self.x_entry.delete(0, 'end')
-        self.y_entry.delete(0, 'end')
-        self.z_entry.delete(0, 'end')
 
     def draw(self):
         self.canvas.delete("all")
@@ -288,12 +259,15 @@ class Application(tk.Frame):
             )
 
     def draw_axles(self):
-        self.axles_viewer.calc_nodes_2d()
-        
-        if len(self.axles_viewer.nodes_2d) > 0:
-            center = self.axles_viewer.nodes_2d[0]
+        center = self.viewer.calc_one_node(self.axles_nodes["center"])
 
-            for n in self.axles_viewer.nodes_2d:
+        axis = []
+        axis.append(self.viewer.calc_one_node(self.axles_nodes["x_axis"]))
+        axis.append(self.viewer.calc_one_node(self.axles_nodes["y_axis"]))
+        axis.append(self.viewer.calc_one_node(self.axles_nodes["z_axis"]))
+        
+        for n in axis:
+            if n is not None and center is not None:
                 self.canvas.create_line(
                     center.x / center.w, 
                     center.y / center.w,
@@ -302,8 +276,20 @@ class Application(tk.Frame):
                     fill="black"
                 )
 
-            for n in self.axles_viewer.nodes_2d:
-                displayed_radius = self.node_radius * self.axles_viewer.radius / (n.z / n.w)
+        if center is not None:
+            displayed_radius = self.node_radius * self.viewer.radius / (center.z / center.w)
+
+            self.canvas.create_oval(
+                center.x / center.w - displayed_radius,
+                center.y / center.w - displayed_radius,
+                center.x / center.w + displayed_radius,
+                center.y / center.w + displayed_radius,
+                fill="blue"
+            )  
+
+        for n in axis:
+            if n is not None:
+                displayed_radius = self.node_radius * self.viewer.radius / (n.z / n.w)
 
                 self.canvas.create_oval(
                     n.x / n.w - displayed_radius,
@@ -311,7 +297,7 @@ class Application(tk.Frame):
                     n.x / n.w + displayed_radius,
                     n.y / n.w + displayed_radius,
                     fill="blue"
-                )
+                )    
 
 
 
